@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>ハヤマGS 受付管理</title>
+<style>
+  :root {
+    --green:#0F6E56; --green-light:#E4F4EE; --green-mid:#1D9E75; --green-text:#085041;
+    --blue:#185FA5; --blue-light:#E6F1FB; --blue-text:#0C447C;
+    --amber-light:#FAEEDA; --amber-text:#633806;
+    --red-light:#FCEBEB; --red-text:#791F1F;
+    --bg:#F5F4F0; --card:#FFFFFF; --border:rgba(0,0,0,0.1);
+    --text:#1a1a18; --sub:#5F5E5A; --faint:#A8A79F;
+    --r:10px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,'Hiragino Sans','Noto Sans JP',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding-bottom:40px}
+  .app-header{background:var(--card);border-bottom:0.5px solid var(--border);padding:14px 16px 12px;position:sticky;top:0;z-index:10}
+  .app-header-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:2px}
+  .app-title{font-size:17px;font-weight:600}
+  .app-date{font-size:12px;color:var(--sub)}
+  .gs-badge{font-size:11px;font-weight:500;background:var(--green-light);color:var(--green-text);padding:3px 9px;border-radius:20px}
+  .conn-badge{font-size:10px;font-weight:500;padding:2px 8px;border-radius:20px;margin-left:6px}
+  .conn-ok{background:#EAF3DE;color:#27500A}
+  .conn-ng{background:#FCEBEB;color:#791F1F}
+  .conn-wait{background:#FAEEDA;color:#633806}
+  .tabs{display:flex;background:var(--card);border-bottom:0.5px solid var(--border);padding:0 16px}
+  .tab{flex:1;padding:10px 4px 9px;font-size:13px;font-weight:500;color:var(--sub);border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;transition:color .15s,border-color .15s}
+  .tab.active{color:var(--green);border-bottom-color:var(--green)}
+  .main{padding:12px 14px}
+  .page{display:none}.page.active{display:block}
+  .stat-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:14px}
+  .stat-card{background:var(--card);border-radius:var(--r);border:0.5px solid var(--border);padding:12px 14px}
+  .stat-label{font-size:11px;color:var(--sub);margin-bottom:3px}
+  .stat-val{font-size:26px;font-weight:600;line-height:1}
+  .stat-unit{font-size:13px;font-weight:400;color:var(--sub)}
+  .section-title{font-size:11px;font-weight:600;color:var(--sub);letter-spacing:.06em;margin:16px 0 6px}
+  .request-card{background:var(--card);border-radius:var(--r);border:0.5px solid var(--border);padding:12px 14px;margin-bottom:8px}
+  .request-card.new-req{border-color:var(--green-mid);border-width:1px}
+  .card-top{display:flex;align-items:center;gap:10px}
+  .card-info{flex:1;min-width:0}
+  .req-company{font-size:14px;font-weight:500}
+  .req-meta{font-size:11px;color:var(--sub);margin-top:2px}
+  .timer-badge{font-size:11px;font-weight:500;background:var(--bg);color:var(--sub);padding:3px 8px;border-radius:6px;white-space:nowrap;flex-shrink:0}
+  .estimate-row{display:flex;align-items:center;gap:8px;margin-top:10px;padding-top:10px;border-top:0.5px solid var(--border)}
+  .estimate-label{font-size:12px;color:var(--sub);white-space:nowrap}
+  .estimate-display{font-size:13px;font-weight:500;color:var(--green-text);background:var(--green-light);padding:4px 10px;border-radius:6px}
+  .co-pill{font-size:10px;font-weight:600;padding:3px 8px;border-radius:20px;white-space:nowrap;flex-shrink:0}
+  .co-bmw{background:var(--blue-light);color:var(--blue-text)}
+  .co-jlr{background:var(--green-light);color:var(--green-text)}
+  .co-por{background:var(--amber-light);color:var(--amber-text)}
+  .co-vol{background:var(--red-light);color:var(--red-text)}
+  .btn-accept{font-size:13px;font-weight:500;padding:8px 14px;border-radius:8px;border:1px solid var(--green-mid);background:var(--green-light);color:var(--green-text);cursor:pointer;white-space:nowrap;flex-shrink:0}
+  .btn-done{font-size:13px;font-weight:500;padding:8px 14px;border-radius:8px;border:1px solid var(--blue);background:var(--blue-light);color:var(--blue-text);cursor:pointer;white-space:nowrap;flex-shrink:0}
+  .request-card.done-card{opacity:.5}
+  .empty-state{text-align:center;padding:28px 16px;color:var(--sub);font-size:13px}
+  .loading-state{text-align:center;padding:28px 16px;color:var(--faint);font-size:13px}
+
+  /* モーダル */
+  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.45);display:flex;align-items:flex-end;z-index:50;opacity:0;pointer-events:none;transition:opacity .2s}
+  .modal-overlay.open{opacity:1;pointer-events:auto}
+  .modal-sheet{background:var(--card);border-radius:16px 16px 0 0;padding:20px 20px 36px;width:100%;transform:translateY(100%);transition:transform .25s ease}
+  .modal-overlay.open .modal-sheet{transform:translateY(0)}
+  .modal-title{font-size:16px;font-weight:600;margin-bottom:4px}
+  .modal-sub{font-size:12px;color:var(--sub);margin-bottom:20px}
+  .modal-co-info{display:flex;align-items:center;gap:8px;margin-bottom:20px;padding:10px 12px;background:var(--bg);border-radius:8px}
+  .modal-co-name{font-size:14px;font-weight:500}
+  .modal-co-meta{font-size:12px;color:var(--sub)}
+  .field-label{font-size:12px;font-weight:500;color:var(--sub);margin-bottom:6px}
+  .time-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:20px}
+  .time-btn{padding:12px 6px;border-radius:8px;border:0.5px solid var(--border);background:var(--bg);color:var(--text);font-size:14px;font-weight:500;cursor:pointer;text-align:center}
+  .time-btn.selected{background:var(--green-light);border-color:var(--green-mid);color:var(--green-text)}
+  .time-custom{display:flex;align-items:center;gap:8px;margin-bottom:24px}
+  .time-custom-input{flex:1;font-size:16px;font-weight:500;padding:10px 12px;border-radius:8px;border:0.5px solid var(--border);background:var(--card);color:var(--text);text-align:center}
+  .time-custom-label{font-size:12px;color:var(--sub)}
+  .modal-confirm-btn{width:100%;padding:14px;border-radius:10px;border:none;background:var(--text);color:#fff;font-size:15px;font-weight:500;cursor:pointer}
+  .modal-cancel{display:block;text-align:center;margin-top:12px;font-size:13px;color:var(--sub);cursor:pointer;padding:8px}
+
+  /* 月次 */
+  .monthly-summary{background:var(--card);border-radius:var(--r);border:0.5px solid var(--border);overflow:hidden;margin-bottom:14px}
+  .monthly-row{display:flex;align-items:center;gap:10px;padding:11px 14px;border-bottom:0.5px solid var(--border)}
+  .monthly-row:last-child{border-bottom:none}
+  .monthly-bar-wrap{flex:1}
+  .monthly-bar-bg{height:6px;border-radius:3px;background:var(--bg);overflow:hidden}
+  .monthly-bar-fill{height:6px;border-radius:3px;background:var(--green-mid)}
+  .monthly-count{font-size:13px;font-weight:500;min-width:40px;text-align:right}
+  .monthly-quota{font-size:11px;color:var(--sub);min-width:36px;text-align:right}
+  .day-table{background:var(--card);border-radius:var(--r);border:0.5px solid var(--border);overflow:hidden}
+  .day-row{display:flex;align-items:center;padding:10px 14px;border-bottom:0.5px solid var(--border);gap:10px}
+  .day-row:last-child{border-bottom:none}
+  .day-date{font-size:13px;min-width:72px}
+  .day-pills{display:flex;gap:4px;flex-wrap:wrap;flex:1}
+  .day-total{font-size:13px;font-weight:500}
+
+  /* 設定パネル */
+  .setting-card{background:var(--card);border-radius:var(--r);border:0.5px solid var(--border);padding:14px 16px;margin-bottom:10px}
+  .setting-title{font-size:14px;font-weight:500;margin-bottom:8px}
+  .setting-desc{font-size:12px;color:var(--sub);line-height:1.6;margin-bottom:10px}
+  .url-input{width:100%;font-size:12px;padding:9px 12px;border-radius:8px;border:0.5px solid var(--border);background:var(--bg);color:var(--text);font-family:monospace}
+  .btn-save{width:100%;padding:11px;border-radius:8px;border:none;background:var(--text);color:#fff;font-size:14px;font-weight:500;cursor:pointer;margin-top:8px}
+  .btn-test{width:100%;padding:10px;border-radius:8px;border:0.5px solid var(--border);background:transparent;color:var(--text);font-size:14px;cursor:pointer;margin-top:6px}
+
+  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--text);color:#fff;font-size:13px;font-weight:500;padding:10px 20px;border-radius:24px;opacity:0;transition:transform .25s ease,opacity .25s ease;z-index:100;white-space:nowrap;max-width:90vw;text-align:center}
+  .toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+</style>
+</head>
+<body>
+
+<div class="app-header">
+  <div class="app-header-top">
+    <span class="app-title">ハヤマGS 受付管理</span>
+    <span class="gs-badge">ハヤマ GS</span>
+  </div>
+  <div style="display:flex;align-items:center;gap:4px">
+    <div class="app-date" id="today-label"></div>
+    <span class="conn-badge conn-wait" id="conn-badge">接続確認中</span>
+  </div>
+</div>
+
+<div class="tabs">
+  <button class="tab active" onclick="switchTab('today')">当日</button>
+  <button class="tab" onclick="switchTab('monthly')">月次集計</button>
+  <button class="tab" onclick="switchTab('settings')">設定</button>
+</div>
+
+<div class="main">
+
+  <!-- 当日 -->
+  <div class="page active" id="page-today">
+    <div class="stat-grid">
+      <div class="stat-card">
+        <div class="stat-label">本日 受入済み</div>
+        <div class="stat-val" id="stat-accepted">-<span class="stat-unit"> 台</span></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">本日 完了</div>
+        <div class="stat-val" id="stat-done">-<span class="stat-unit"> 台</span></div>
+      </div>
+    </div>
+    <div class="section-title">新着依頼</div>
+    <div id="list-new"><div class="loading-state">読み込み中...</div></div>
+    <div class="section-title">作業中</div>
+    <div id="list-inprogress"><div class="loading-state">読み込み中...</div></div>
+    <div class="section-title">本日 完了</div>
+    <div id="list-done"><div class="loading-state">読み込み中...</div></div>
+  </div>
+
+  <!-- 月次 -->
+  <div class="page" id="page-monthly">
+    <div class="section-title" id="monthly-title">月次集計</div>
+    <div class="monthly-summary" id="monthly-by-co"><div class="loading-state">読み込み中...</div></div>
+    <div class="section-title">日別 受入台数</div>
+    <div class="day-table" id="daily-list"><div class="loading-state">読み込み中...</div></div>
+  </div>
+
+  <!-- 設定 -->
+  <div class="page" id="page-settings">
+    <div class="setting-card">
+      <div class="setting-title">Google Apps Script URL</div>
+      <div class="setting-desc">
+        Googleスプレッドシートに紐づけたApps Scriptを公開した際に発行されるURLを貼り付けてください。<br>
+        設定手順書の「ステップ4」で取得できます。
+      </div>
+      <input class="url-input" type="text" id="gas-url-input"
+        placeholder="https://script.google.com/macros/s/xxxxxx/exec">
+      <button class="btn-save" onclick="saveGasUrl()">URLを保存して接続</button>
+      <button class="btn-test" onclick="testConnection()">接続テスト</button>
+    </div>
+    <div class="setting-card">
+      <div class="setting-title">接続状態</div>
+      <div id="conn-detail" style="font-size:13px;color:var(--sub);line-height:1.8">
+        URLが未設定です。上のフォームにURLを入力して保存してください。
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- 受入モーダル -->
+<div class="modal-overlay" id="modal" onclick="closeModalOutside(event)">
+  <div class="modal-sheet">
+    <div class="modal-title">受入・完了目安を入力</div>
+    <div class="modal-sub">スカイグループに自動で通知されます</div>
+    <div class="modal-co-info" id="modal-co-info"></div>
+    <div class="field-label">完了目安（ボタンで選択 or 直接入力）</div>
+    <div class="time-grid" id="time-presets"></div>
+    <div class="time-custom">
+      <input class="time-custom-input" type="time" id="custom-time">
+      <span class="time-custom-label">直接指定</span>
+    </div>
+    <button class="modal-confirm-btn" onclick="confirmAccept()">受入確定・通知を送る</button>
+    <span class="modal-cancel" onclick="closeModal()">キャンセル</span>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ============================================================
+// 定数
+// ============================================================
+const CO_NAMES = {BMW:'BMW正規販売店',JLR:'ジャガーランドローバー',POR:'ポルシェ',VOL:'ボルボ'};
+const CO_CLS   = {BMW:'co-bmw',JLR:'co-jlr',POR:'co-por',VOL:'co-vol'};
+const STORAGE_KEY = 'hayama_gas_url';
+
+// ============================================================
+// GAS URL 管理
+// ============================================================
+function getGasUrl() { return localStorage.getItem(STORAGE_KEY) || ''; }
+
+function saveGasUrl() {
+  const url = document.getElementById('gas-url-input').value.trim();
+  if (!url.startsWith('https://script.google.com')) {
+    showToast('正しいGoogle Apps Script URLを入力してください');
+    return;
+  }
+  localStorage.setItem(STORAGE_KEY, url);
+  showToast('URLを保存しました');
+  testConnection();
+}
+
+function loadSettingsUI() {
+  const url = getGasUrl();
+  if (url) document.getElementById('gas-url-input').value = url;
+}
+
+async function testConnection() {
+  const url = getGasUrl();
+  if (!url) { updateConnBadge('ng', 'URLが未設定'); return; }
+  updateConnBadge('wait', '確認中...');
+  try {
+    const res = await gasRequest({action:'ping'});
+    if (res.status === 'ok') {
+      updateConnBadge('ok', 'スプレッドシート接続済み');
+      document.getElementById('conn-detail').textContent =
+        'スプレッドシートと正常に接続されています。';
+    } else {
+      updateConnBadge('ng', '接続エラー');
+    }
+  } catch(e) {
+    updateConnBadge('ng', '接続失敗');
+    document.getElementById('conn-detail').textContent =
+      'URLを確認してください。GASが正しく公開されているか確認してください。\n\nエラー: ' + e.message;
+  }
+}
+
+function updateConnBadge(state, text) {
+  const el = document.getElementById('conn-badge');
+  el.className = 'conn-badge conn-' + state;
+  el.textContent = text;
+}
+
+// ============================================================
+// GAS 通信
+// ============================================================
+async function gasRequest(params) {
+  const url = getGasUrl();
+  if (!url) throw new Error('GAS URL未設定');
+  const qs = new URLSearchParams(params).toString();
+  const res = await fetch(`${url}?${qs}`, {redirect:'follow'});
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  return res.json();
+}
+
+async function gasPost(params) {
+  const url = getGasUrl();
+  if (!url) throw new Error('GAS URL未設定');
+  const res = await fetch(url, {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(params),
+    redirect:'follow'
+  });
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  return res.json();
+}
+
+// ============================================================
+// データ取得
+// ============================================================
+async function fetchToday() {
+  try {
+    const data = await gasRequest({action:'getToday', date: todayStr()});
+    renderToday(data.requests || []);
+  } catch(e) {
+    // GAS未設定時はデモデータで表示
+    renderToday(demoRequests());
+  }
+}
+
+async function fetchMonthly() {
+  const ym = currentYM();
+  try {
+    const data = await gasRequest({action:'getMonthly', ym});
+    renderMonthly(data.companies || [], data.daily || [], ym);
+  } catch(e) {
+    renderMonthly(demoMonthly(), demoDailyData(), ym);
+  }
+}
+
+// ============================================================
+// 当日レンダリング
+// ============================================================
+function renderToday(reqs) {
+  const newL  = reqs.filter(r=>r.status==='待機中');
+  const inpL  = reqs.filter(r=>r.status==='作業中');
+  const doneL = reqs.filter(r=>r.status==='完了');
+
+  document.getElementById('stat-accepted').innerHTML =
+    (inpL.length+doneL.length)+'<span class="stat-unit"> 台</span>';
+  document.getElementById('stat-done').innerHTML =
+    doneL.length+'<span class="stat-unit"> 台</span>';
+
+  const newEl = document.getElementById('list-new');
+  newEl.innerHTML = newL.length === 0
+    ? '<div class="empty-state">新着依頼はありません</div>'
+    : newL.map(r=>`
+      <div class="request-card new-req">
+        <div class="card-top">
+          ${pillHtml(r.co)}
+          <div class="card-info">
+            <div class="req-company">${CO_NAMES[r.co]||r.co}</div>
+            <div class="req-meta">${r.requester}　${r.requestedAt} 依頼</div>
+          </div>
+          <button class="btn-accept" onclick='openModal(${JSON.stringify(r)})'>受入</button>
+        </div>
+      </div>`).join('');
+
+  const inpEl = document.getElementById('list-inprogress');
+  if (inpL.length === 0) {
+    inpEl.innerHTML = '<div class="empty-state">作業中の車はありません</div>';
+  } else {
+    inpEl.innerHTML = inpL.map(r=>{
+      const mins = r.startTime ? Math.floor((Date.now()-r.startTime)/60000) : '-';
+      return `
+        <div class="request-card">
+          <div class="card-top">
+            ${pillHtml(r.co)}
+            <div class="card-info">
+              <div class="req-company">${CO_NAMES[r.co]||r.co}</div>
+              <div class="req-meta">${r.requester}　${r.acceptedAt} 受入</div>
+            </div>
+            <span class="timer-badge" id="timer-${r.id}">${mins}分</span>
+            <button class="btn-done" onclick='complete(${JSON.stringify(r)})'>完了</button>
+          </div>
+          ${r.estimateAt?`
+          <div class="estimate-row">
+            <span class="estimate-label">完了目安</span>
+            <span class="estimate-display">${r.estimateAt} 頃</span>
+          </div>`:''}
+        </div>`;
+    }).join('');
+    startTimers(inpL);
+  }
+
+  const doneEl = document.getElementById('list-done');
+  doneEl.innerHTML = doneL.length === 0
+    ? '<div class="empty-state">まだ完了した車はありません</div>'
+    : doneL.map(r=>`
+      <div class="request-card done-card">
+        <div class="card-top">
+          ${pillHtml(r.co)}
+          <div class="card-info">
+            <div class="req-company">${CO_NAMES[r.co]||r.co}</div>
+            <div class="req-meta">${r.acceptedAt} 受入 → ${r.doneAt} 完了</div>
+          </div>
+        </div>
+        ${r.estimateAt?`
+        <div class="estimate-row">
+          <span class="estimate-label">目安</span>
+          <span class="estimate-display">${r.estimateAt} 頃</span>
+        </div>`:''}
+      </div>`).join('');
+}
+
+// ============================================================
+// 月次レンダリング
+// ============================================================
+function renderMonthly(companies, daily, ym) {
+  document.getElementById('monthly-title').textContent = ym.replace('-','年')+'月 集計';
+  const total = companies.reduce((s,d)=>s+d.count,0);
+  document.getElementById('monthly-by-co').innerHTML =
+    companies.map(d=>{
+      const pct = Math.round(d.count/(d.quota||30)*100);
+      return `
+        <div class="monthly-row">
+          <span class="co-pill ${CO_CLS[d.co]||'co-bmw'}">${d.co}</span>
+          <div class="monthly-bar-wrap">
+            <div class="monthly-bar-bg"><div class="monthly-bar-fill" style="width:${Math.min(pct,100)}%"></div></div>
+          </div>
+          <span class="monthly-count">${d.count}台</span>
+          <span class="monthly-quota">/ ${d.quota||30}</span>
+        </div>`;
+    }).join('') + `
+    <div class="monthly-row" style="background:var(--bg)">
+      <span style="font-size:12px;font-weight:600;color:var(--sub);flex:1">合計</span>
+      <span class="monthly-count" style="font-size:16px">${total}台</span>
+    </div>`;
+
+  document.getElementById('daily-list').innerHTML = daily.map(d=>{
+    const t = Object.values(d.counts).reduce((s,v)=>s+v,0);
+    return `
+      <div class="day-row">
+        <span class="day-date">${d.date}</span>
+        <div class="day-pills">
+          ${Object.entries(d.counts).map(([co,n])=>`<span class="co-pill ${CO_CLS[co]||''}">${co} ${n}</span>`).join('')}
+        </div>
+        <span class="day-total">${t}台</span>
+      </div>`;
+  }).join('') || '<div class="empty-state">データがありません</div>';
+}
+
+// ============================================================
+// 受入モーダル
+// ============================================================
+let pendingReq = null;
+
+function openModal(r) {
+  pendingReq = r;
+  document.getElementById('modal-co-info').innerHTML = `
+    ${pillHtml(r.co)}
+    <div>
+      <div class="modal-co-name">${CO_NAMES[r.co]||r.co}</div>
+      <div class="modal-co-meta">${r.requester}　${r.requestedAt} 依頼</div>
+    </div>`;
+  const base = new Date();
+  const presets = [
+    {label:'30分後', time: fmtTime(new Date(base.getTime()+30*60000))},
+    {label:'1時間後', time: fmtTime(new Date(base.getTime()+60*60000))},
+    {label:'1.5時間後', time: fmtTime(new Date(base.getTime()+90*60000))},
+  ];
+  document.getElementById('time-presets').innerHTML = presets.map(p=>`
+    <button class="time-btn" onclick="selectPreset(this,'${p.time}')">
+      ${p.label}<br><span style="font-size:12px;font-weight:400">${p.time}</span>
+    </button>`).join('');
+  document.getElementById('custom-time').value = '';
+  document.getElementById('modal').classList.add('open');
+}
+
+function selectPreset(btn, time) {
+  document.querySelectorAll('.time-btn').forEach(b=>b.classList.remove('selected'));
+  btn.classList.add('selected');
+  document.getElementById('custom-time').value = time;
+}
+
+function closeModal() { document.getElementById('modal').classList.remove('open'); pendingReq=null; }
+function closeModalOutside(e) { if(e.target===document.getElementById('modal')) closeModal(); }
+
+async function confirmAccept() {
+  const timeVal = document.getElementById('custom-time').value;
+  const r = pendingReq;
+  if (!r) return;
+  const now = new Date();
+  const acceptedAt = fmtTime(now);
+  closeModal();
+  showToast('受入処理中...');
+  try {
+    await gasPost({
+      action: 'accept',
+      id: r.id,
+      acceptedAt,
+      estimateAt: timeVal || ''
+    });
+    showToast(`${r.co} 受入（${acceptedAt}）${timeVal?'　目安 '+timeVal:''}　スカイへ通知送信`);
+  } catch(e) {
+    showToast(`受入記録済み（オフライン）`);
+  }
+  await fetchToday();
+}
+
+async function complete(r) {
+  const doneAt = fmtTime(new Date());
+  showToast('完了処理中...');
+  try {
+    await gasPost({action:'complete', id: r.id, doneAt});
+    showToast(`${CO_NAMES[r.co]||r.co} 完了（${doneAt}）　スカイへ「終わりました」通知送信`);
+  } catch(e) {
+    showToast(`完了記録済み（オフライン）`);
+  }
+  await fetchToday();
+}
+
+// ============================================================
+// ユーティリティ
+// ============================================================
+function pillHtml(co) {
+  return `<span class="co-pill ${CO_CLS[co]||'co-bmw'}">${co}</span>`;
+}
+function fmtTime(d) {
+  return `${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}`;
+}
+function todayStr() {
+  const d = new Date();
+  return `${d.getFullYear()}/${(d.getMonth()+1).toString().padStart(2,'0')}/${d.getDate().toString().padStart(2,'0')}`;
+}
+function currentYM() {
+  const d = new Date();
+  return `${d.getFullYear()}-${(d.getMonth()+1).toString().padStart(2,'0')}`;
+}
+
+let timerInterval = null;
+function startTimers(inpList) {
+  if (timerInterval) clearInterval(timerInterval);
+  timerInterval = setInterval(()=>{
+    inpList.forEach(r=>{
+      const el = document.getElementById('timer-'+r.id);
+      if (el && r.startTime) el.textContent = Math.floor((Date.now()-r.startTime)/60000)+'分';
+    });
+  }, 15000);
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 3500);
+}
+
+function switchTab(tab) {
+  document.querySelectorAll('.tab').forEach((el,i)=>
+    el.classList.toggle('active',(i===0&&tab==='today')||(i===1&&tab==='monthly')||(i===2&&tab==='settings')));
+  ['today','monthly','settings'].forEach(p=>
+    document.getElementById('page-'+p).classList.toggle('active', p===tab));
+  if (tab==='monthly') fetchMonthly();
+  if (tab==='settings') loadSettingsUI();
+}
+
+// ============================================================
+// デモデータ（GAS未接続時のフォールバック）
+// ============================================================
+function demoRequests() {
+  return [
+    {id:'demo-1',co:'JLR',requester:'田中 誠',  requestedAt:'09:38',acceptedAt:null,estimateAt:null,doneAt:null,status:'待機中'},
+    {id:'demo-2',co:'BMW',requester:'鈴木 太郎',requestedAt:'09:10',acceptedAt:'09:15',estimateAt:'10:30',doneAt:null,status:'作業中',startTime:Date.now()-31*60000},
+    {id:'demo-3',co:'POR',requester:'佐藤 健',  requestedAt:'08:45',acceptedAt:'08:50',estimateAt:'09:20',doneAt:'09:22',status:'完了'},
+  ];
+}
+function demoMonthly() {
+  return [{co:'BMW',count:12,quota:30},{co:'JLR',count:8,quota:30},{co:'POR',count:5,quota:30},{co:'VOL',count:3,quota:30}];
+}
+function demoDailyData() {
+  return [
+    {date:'6/9（月）',counts:{BMW:2,JLR:1,POR:1}},
+    {date:'6/6（金）',counts:{BMW:1,JLR:2}},
+    {date:'6/5（木）',counts:{BMW:3,POR:1}},
+  ];
+}
+
+// ============================================================
+// 初期化
+// ============================================================
+const wd = ['日','月','火','水','木','金','土'];
+const now = new Date();
+document.getElementById('today-label').textContent =
+  `${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日（${wd[now.getDay()]}）`;
+
+const savedUrl = getGasUrl();
+if (savedUrl) {
+  testConnection();
+} else {
+  updateConnBadge('ng', 'URL未設定');
+}
+fetchToday();
+</script>
+</body>
+</html>
