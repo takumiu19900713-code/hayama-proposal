@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>洗車管理システム構想</title>
+<style>
+  :root {
+    --ink: #1C1C1A;
+    --ink-sub: #6B6A65;
+    --ink-faint: #A8A79F;
+    --surface: #F7F6F2;
+    --white: #FFFFFF;
+    --green: #0F6E56;
+    --green-light: #E4F4EE;
+    --green-mid: #1D9E75;
+    --border: rgba(28,28,26,0.1);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, 'Hiragino Sans', 'Noto Sans JP', sans-serif;
+    background: var(--surface);
+    color: var(--ink);
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 0 0 60px;
+  }
+
+  .hero {
+    background: var(--ink);
+    color: var(--white);
+    padding: 40px 24px 36px;
+  }
+  .hero-eyebrow {
+    font-size: 11px; letter-spacing: .12em;
+    color: var(--green-mid); margin-bottom: 14px; font-weight: 500;
+  }
+  .hero-title {
+    font-size: 28px; font-weight: 700;
+    line-height: 1.25; margin-bottom: 14px; letter-spacing: -.01em;
+  }
+  .hero-title span { color: var(--green-mid); }
+  .hero-body { font-size: 14px; line-height: 1.75; color: rgba(255,255,255,0.65); }
+
+  .section { padding: 28px 20px; }
+  .section + .section { border-top: 0.5px solid var(--border); }
+  .section-label {
+    font-size: 10px; font-weight: 700;
+    letter-spacing: .1em; color: var(--ink-faint); margin-bottom: 14px;
+  }
+
+  .pain-list { display: flex; flex-direction: column; gap: 10px; }
+  .pain-item {
+    background: var(--white); border: 0.5px solid var(--border);
+    border-radius: 10px; padding: 14px 16px;
+    display: flex; gap: 12px; align-items: flex-start;
+  }
+  .pain-icon {
+    width: 32px; height: 32px; border-radius: 8px;
+    background: #FEF0ED; display: flex; align-items: center;
+    justify-content: center; flex-shrink: 0; font-size: 15px;
+  }
+  .pain-title { font-size: 14px; font-weight: 500; margin-bottom: 3px; }
+  .pain-desc { font-size: 12px; color: var(--ink-sub); line-height: 1.6; }
+
+  .flow { display: flex; flex-direction: column; }
+  .flow-step {
+    display: flex; gap: 14px; align-items: flex-start;
+    padding: 14px 0; border-bottom: 0.5px solid var(--border);
+  }
+  .flow-step:last-child { border-bottom: none; }
+  .flow-who {
+    font-size: 10px; font-weight: 700; letter-spacing: .06em;
+    padding: 3px 8px; border-radius: 20px;
+    white-space: nowrap; flex-shrink: 0; margin-top: 1px;
+  }
+  .who-sky { background: #EEEDFE; color: #3C3489; }
+  .who-gs  { background: var(--green-light); color: var(--green); }
+  .who-auto { background: #F1EFE8; color: #5F5E5A; }
+  .flow-action { font-size: 14px; font-weight: 500; margin-bottom: 2px; }
+  .flow-note { font-size: 12px; color: var(--ink-sub); line-height: 1.5; }
+
+  .merit-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .merit-card {
+    background: var(--white); border: 0.5px solid var(--border);
+    border-radius: 10px; padding: 14px;
+  }
+  .merit-num { font-size: 22px; font-weight: 700; color: var(--green); line-height: 1; margin-bottom: 4px; }
+  .merit-unit { font-size: 12px; font-weight: 400; color: var(--ink-sub); }
+  .merit-label { font-size: 12px; color: var(--ink-sub); line-height: 1.5; }
+
+  .mockup-wrap { background: var(--ink); padding: 24px 20px; }
+  .mockup-label { font-size: 10px; font-weight: 700; letter-spacing: .1em; color: rgba(255,255,255,0.4); margin-bottom: 16px; }
+  .mockup-tabs { display: flex; gap: 2px; margin-bottom: 12px; }
+  .m-tab {
+    flex: 1; padding: 8px 4px; text-align: center;
+    font-size: 11px; font-weight: 500; border-radius: 6px;
+    color: rgba(255,255,255,0.45); cursor: pointer;
+    border: none; background: rgba(255,255,255,0.08);
+  }
+  .m-tab.active { background: var(--green); color: #fff; }
+  .mock-screen { background: #F7F6F2; border-radius: 12px; overflow: hidden; }
+  .mock-page { display: none; }
+  .mock-page.active { display: block; }
+  .mock-hdr { background: #fff; padding: 10px 14px; border-bottom: 0.5px solid rgba(0,0,0,0.08); }
+  .mock-hdr-title { font-size: 14px; font-weight: 600; color: var(--ink); }
+  .mock-hdr-date { font-size: 10px; color: var(--ink-sub); }
+  .mock-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 10px 12px; }
+  .mock-stat { background: #fff; border-radius: 7px; padding: 8px 10px; border: 0.5px solid rgba(0,0,0,0.07); }
+  .mock-stat-l { font-size: 10px; color: var(--ink-sub); }
+  .mock-stat-v { font-size: 18px; font-weight: 600; color: var(--ink); }
+  .mock-sec { font-size: 9px; font-weight: 700; letter-spacing: .08em; color: var(--ink-faint); padding: 6px 12px 3px; }
+  .mock-card { margin: 0 10px 7px; background: #fff; border-radius: 8px; padding: 9px 11px; border: 0.5px solid rgba(0,0,0,0.07); }
+  .mock-card.new-card { border-color: var(--green-mid); }
+  .mock-card-top { display: flex; align-items: center; gap: 7px; }
+  .m-pill { font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 20px; }
+  .mp-bmw { background: #E6F1FB; color: #0C447C; }
+  .mp-jlr { background: #E1F5EE; color: #085041; }
+  .mp-por { background: #FAEEDA; color: #633806; }
+  .mp-vol { background: #FCEBEB; color: #791F1F; }
+  .mock-co { font-size: 12px; font-weight: 500; flex: 1; color: var(--ink); }
+  .mock-time { font-size: 10px; color: var(--ink-sub); }
+  .mock-btn-accept { font-size: 10px; font-weight: 600; padding: 4px 10px; border-radius: 5px; border: none; background: var(--green-light); color: var(--green); }
+  .mock-btn-done { font-size: 10px; font-weight: 600; padding: 4px 10px; border-radius: 5px; border: none; background: #E6F1FB; color: #0C447C; }
+  .mock-estimate { display: flex; align-items: center; gap: 5px; margin-top: 6px; padding-top: 6px; border-top: 0.5px solid rgba(0,0,0,0.07); }
+  .mock-est-label { font-size: 10px; color: var(--ink-sub); }
+  .mock-est-val { font-size: 11px; font-weight: 500; background: var(--green-light); color: var(--green); padding: 2px 7px; border-radius: 4px; }
+  .notify-bubble { background: #fff; border-radius: 4px 12px 12px 12px; padding: 9px 12px; font-size: 11px; line-height: 1.6; color: var(--ink); display: inline-block; max-width: 90%; border: 0.5px solid rgba(0,0,0,0.07); }
+  .notify-sender { font-size: 10px; color: rgba(255,255,255,0.45); margin-bottom: 4px; }
+  .notify-time { font-size: 10px; color: rgba(255,255,255,0.3); margin-top: 4px; text-align: right; }
+  .mock-monthly { padding: 6px 10px 10px; }
+  .mock-m-row { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 0.5px solid rgba(0,0,0,0.06); }
+  .mock-m-row:last-child { border-bottom: none; }
+  .mock-m-bar-bg { flex: 1; height: 4px; background: rgba(0,0,0,0.08); border-radius: 2px; }
+  .mock-m-bar { height: 4px; border-radius: 2px; background: var(--green-mid); }
+  .mock-m-count { font-size: 11px; font-weight: 500; min-width: 32px; text-align: right; color: var(--ink); }
+
+  /* 将来拡張 */
+  .future-section {
+    background: var(--ink);
+    padding: 28px 20px;
+  }
+  .future-label {
+    font-size: 10px; font-weight: 700; letter-spacing: .1em;
+    color: rgba(255,255,255,0.35); margin-bottom: 16px;
+  }
+  .future-title {
+    font-size: 20px; font-weight: 700; color: var(--white);
+    line-height: 1.3; margin-bottom: 10px;
+  }
+  .future-title span { color: var(--green-mid); }
+  .future-body {
+    font-size: 13px; color: rgba(255,255,255,0.55); line-height: 1.75; margin-bottom: 18px;
+  }
+  .future-cards { display: flex; flex-direction: column; gap: 8px; }
+  .future-card {
+    background: rgba(255,255,255,0.06);
+    border: 0.5px solid rgba(255,255,255,0.1);
+    border-radius: 10px; padding: 13px 15px;
+    display: flex; gap: 12px; align-items: flex-start;
+  }
+  .future-card-icon {
+    width: 30px; height: 30px; border-radius: 7px;
+    background: rgba(29,158,117,0.2);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; flex-shrink: 0;
+  }
+  .future-card-title { font-size: 13px; font-weight: 500; color: var(--white); margin-bottom: 2px; }
+  .future-card-desc { font-size: 12px; color: rgba(255,255,255,0.45); line-height: 1.5; }
+
+  /* スタッフ軽減セクション */
+  .staff-section {
+    padding: 28px 20px;
+    background: var(--white);
+    border-top: 0.5px solid var(--border);
+  }
+  .timeline { display: flex; flex-direction: column; gap: 0; margin-bottom: 20px; }
+  .tl-row {
+    display: flex; gap: 0; align-items: stretch;
+  }
+  .tl-left {
+    width: 52px; flex-shrink: 0;
+    display: flex; flex-direction: column; align-items: center;
+  }
+  .tl-dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: var(--green-mid); flex-shrink: 0; margin-top: 4px;
+    position: relative; z-index: 1;
+  }
+  .tl-line {
+    width: 1.5px; flex: 1; background: var(--border);
+    margin-top: 2px;
+  }
+  .tl-row:last-child .tl-line { display: none; }
+  .tl-time {
+    font-size: 11px; font-weight: 600; color: var(--green);
+    white-space: nowrap; margin-top: 2px;
+  }
+  .tl-card {
+    flex: 1; background: var(--surface);
+    border-radius: 8px; padding: 10px 12px;
+    margin-bottom: 10px; border: 0.5px solid var(--border);
+  }
+  .tl-card-title { font-size: 13px; font-weight: 500; margin-bottom: 3px; }
+  .tl-card-desc { font-size: 12px; color: var(--ink-sub); line-height: 1.5; }
+  .tl-tag {
+    display: inline-block; font-size: 10px; font-weight: 600;
+    padding: 2px 7px; border-radius: 20px; margin-bottom: 5px;
+  }
+  .tag-before { background: #FEF0ED; color: #A32D2D; }
+  .tag-after  { background: var(--green-light); color: var(--green); }
+
+  .relief-list { display: flex; flex-direction: column; gap: 8px; }
+  .relief-item {
+    display: flex; align-items: flex-start; gap: 12px;
+    background: var(--surface); border-radius: 10px;
+    padding: 12px 14px; border: 0.5px solid var(--border);
+  }
+  .relief-icon {
+    width: 32px; height: 32px; border-radius: 8px;
+    background: var(--green-light);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 15px; flex-shrink: 0;
+  }
+  .relief-title { font-size: 13px; font-weight: 500; margin-bottom: 3px; }
+  .relief-desc { font-size: 12px; color: var(--ink-sub); line-height: 1.55; }
+  .relief-badge {
+    display: inline-block; font-size: 10px; font-weight: 600;
+    background: var(--green-light); color: var(--green);
+    padding: 2px 8px; border-radius: 20px; margin-top: 5px;
+  }
+
+  .footer { padding: 28px 20px; text-align: center; }
+  .footer-note {
+    font-size: 12px; color: var(--ink-sub); line-height: 1.8;
+    background: var(--white); border-radius: 10px; padding: 16px;
+    border: 0.5px solid var(--border);
+  }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="hero-eyebrow">HAYAMA GS × SKY GROUP</div>
+  <div class="hero-title">洗車の受付、<br><span>ぜんぶ自動</span>にしませんか。</div>
+  <div class="hero-body">手書きチケット・口頭連絡・月末の台数確認。<br>そのあたりをまるごとシステム化する構想です。</div>
+</div>
+
+<div class="section">
+  <div class="section-label">TODAY'S PAIN</div>
+  <div class="pain-list">
+    <div class="pain-item">
+      <div class="pain-icon">📋</div>
+      <div>
+        <div class="pain-title">手書きチケットが属人的</div>
+        <div class="pain-desc">スタッフが朝に手書きして管理。誰かが休むと回らない。</div>
+      </div>
+    </div>
+    <div class="pain-item">
+      <div class="pain-icon">❓</div>
+      <div>
+        <div class="pain-title">今日何台来るか読めない</div>
+        <div class="pain-desc">突然来るので段取りが組めず、一般客対応と重なってしまう。</div>
+      </div>
+    </div>
+    <div class="pain-item">
+      <div class="pain-icon">📊</div>
+      <div>
+        <div class="pain-title">月末集計が手作業</div>
+        <div class="pain-desc">会社ごとに何台来たか、後から数えるしかない。</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-label">HOW IT WORKS</div>
+  <div class="flow">
+    <div class="flow-step">
+      <span class="flow-who who-sky">スカイ</span>
+      <div>
+        <div class="flow-action">LINE WORKSで会社を選んで送る</div>
+        <div class="flow-note">BMW / JLR / ポルシェ / ボルボを選ぶだけ。10秒で完了。</div>
+      </div>
+    </div>
+    <div class="flow-step">
+      <span class="flow-who who-gs">GS</span>
+      <div>
+        <div class="flow-action">車が来たら受入ボタン＋目安時刻</div>
+        <div class="flow-note">「14:30頃に終わります」がスカイに自動通知される。</div>
+      </div>
+    </div>
+    <div class="flow-step">
+      <span class="flow-who who-auto">自動</span>
+      <div>
+        <div class="flow-action">日時・会社・時刻をすべて自動記録</div>
+        <div class="flow-note">会社別・日別の台数がリアルタイムで蓄積される。</div>
+      </div>
+    </div>
+    <div class="flow-step">
+      <span class="flow-who who-gs">GS</span>
+      <div>
+        <div class="flow-action">完了ボタンを押す</div>
+        <div class="flow-note">「終わりました」が該当会社のチャンネルだけに届く。</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="mockup-wrap">
+  <div class="mockup-label">SCREEN PREVIEW</div>
+  <div class="mockup-tabs">
+    <button class="m-tab active" onclick="switchMock('gs')">GS管理画面</button>
+    <button class="m-tab" onclick="switchMock('notify')">スカイへの通知</button>
+    <button class="m-tab" onclick="switchMock('monthly')">月次集計</button>
+  </div>
+  <div class="mock-screen">
+    <div class="mock-page active" id="mock-gs">
+      <div class="mock-hdr">
+        <div class="mock-hdr-title">受付管理</div>
+        <div class="mock-hdr-date">6月9日（月）</div>
+      </div>
+      <div class="mock-stats">
+        <div class="mock-stat"><div class="mock-stat-l">本日受入</div><div class="mock-stat-v">4台</div></div>
+        <div class="mock-stat"><div class="mock-stat-l">完了</div><div class="mock-stat-v">3台</div></div>
+      </div>
+      <div class="mock-sec">新着</div>
+      <div class="mock-card new-card">
+        <div class="mock-card-top">
+          <span class="m-pill mp-jlr">JLR</span>
+          <span class="mock-co">ジャガーランドローバー</span>
+          <span class="mock-time">9:38</span>
+          <button class="mock-btn-accept">受入</button>
+        </div>
+      </div>
+      <div class="mock-sec">作業中</div>
+      <div class="mock-card">
+        <div class="mock-card-top">
+          <span class="m-pill mp-bmw">BMW</span>
+          <span class="mock-co">BMW正規販売店</span>
+          <span class="mock-time">31分</span>
+          <button class="mock-btn-done">完了</button>
+        </div>
+        <div class="mock-estimate">
+          <span class="mock-est-label">目安</span>
+          <span class="mock-est-val">10:30頃</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="mock-page" id="mock-notify">
+      <div class="mock-hdr">
+        <div class="mock-hdr-title">BMW チャンネル</div>
+        <div class="mock-hdr-date">LINE WORKS</div>
+      </div>
+      <div style="padding:12px 12px 4px;background:#E8E6E0;">
+        <div class="notify-sender">ハヤマGS ボット</div>
+        <div class="notify-bubble">BMW正規販売店の車を受け入れました。<br>完了目安：<strong>10:30頃</strong></div>
+        <div class="notify-time">9:42</div>
+      </div>
+      <div style="padding:12px 12px 16px;background:#E8E6E0;">
+        <div class="notify-sender">ハヤマGS ボット</div>
+        <div class="notify-bubble">BMW正規販売店の洗車が完了しました。<br>完了時刻：<strong>10:28</strong></div>
+        <div class="notify-time">10:28</div>
+      </div>
+    </div>
+
+    <div class="mock-page" id="mock-monthly">
+      <div class="mock-hdr">
+        <div class="mock-hdr-title">6月 集計</div>
+        <div class="mock-hdr-date">会社別・自動集計</div>
+      </div>
+      <div class="mock-monthly">
+        <div class="mock-m-row"><span class="m-pill mp-bmw">BMW</span><div class="mock-m-bar-bg"><div class="mock-m-bar" style="width:60%"></div></div><span class="mock-m-count">18台</span></div>
+        <div class="mock-m-row"><span class="m-pill mp-jlr">JLR</span><div class="mock-m-bar-bg"><div class="mock-m-bar" style="width:40%"></div></div><span class="mock-m-count">12台</span></div>
+        <div class="mock-m-row"><span class="m-pill mp-por">POR</span><div class="mock-m-bar-bg"><div class="mock-m-bar" style="width:23%"></div></div><span class="mock-m-count">7台</span></div>
+        <div class="mock-m-row"><span class="m-pill mp-vol">VOL</span><div class="mock-m-bar-bg"><div class="mock-m-bar" style="width:13%"></div></div><span class="mock-m-count">4台</span></div>
+        <div style="padding:8px 0 0;display:flex;justify-content:space-between;font-size:12px;">
+          <span style="color:var(--ink-sub)">月計</span><span style="font-weight:600">41台</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- スタッフ軽減セクション -->
+<div class="staff-section">
+  <div class="section-label">FOR GS STAFF　スタッフの負担がなくなること</div>
+
+  <div class="relief-list">
+    <div class="relief-item">
+      <div class="relief-icon">📋</div>
+      <div>
+        <div class="relief-title">手書きチケットがゼロになる</div>
+        <div class="relief-desc">朝の受付準備・チケット管理・紛失リスクがすべてなくなる。受入ボタンを押すだけで記録が完了する。</div>
+        <span class="relief-badge">毎日の作業から解放</span>
+      </div>
+    </div>
+    <div class="relief-item">
+      <div class="relief-icon">🕐</div>
+      <div>
+        <div class="relief-title">「今どの車が何台いるか」が一目でわかる</div>
+        <div class="relief-desc">作業中リストに各社の車と目安時刻が並ぶ。頭の中で管理していたことをシステムに任せられる。</div>
+        <span class="relief-badge">気づかいコストが減る</span>
+      </div>
+    </div>
+    <div class="relief-item">
+      <div class="relief-icon">📞</div>
+      <div>
+        <div class="relief-title">「終わりましたか？」の問い合わせがなくなる</div>
+        <div class="relief-desc">完了ボタンを押した瞬間にスカイ側へ自動通知が飛ぶ。スタッフが口頭で伝える手間も、電話で確認される手間もなくなる。</div>
+        <span class="relief-badge">中断なく作業に集中できる</span>
+      </div>
+    </div>
+    <div class="relief-item">
+      <div class="relief-icon">📅</div>
+      <div>
+        <div class="relief-title">月末の集計作業がゼロになる</div>
+        <div class="relief-desc">会社別・日別の台数はリアルタイムで自動集計される。月末にチケットを数え直す必要がなくなる。</div>
+        <span class="relief-badge">月末の残業がなくなる</span>
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-top:20px">
+    <div class="section-label" style="margin-bottom:12px">1日の動きのイメージ</div>
+    <div class="timeline">
+      <div class="tl-row">
+        <div class="tl-left">
+          <span class="tl-time">9:10</span>
+          <div class="tl-dot"></div>
+          <div class="tl-line"></div>
+        </div>
+        <div class="tl-card">
+          <span class="tl-tag tag-after">導入後</span>
+          <div class="tl-card-title">BMW到着　→　受入ボタンを押す</div>
+          <div class="tl-card-desc">目安「10:30頃」を選択。スカイBMWチームに自動通知。記録完了。</div>
+        </div>
+      </div>
+      <div class="tl-row">
+        <div class="tl-left">
+          <span class="tl-time">9:38</span>
+          <div class="tl-dot"></div>
+          <div class="tl-line"></div>
+        </div>
+        <div class="tl-card">
+          <span class="tl-tag tag-after">導入後</span>
+          <div class="tl-card-title">JLR到着　→　受入ボタンを押す</div>
+          <div class="tl-card-desc">作業中リストに2台が並ぶ。どちらが先に終わるか一目でわかる。</div>
+        </div>
+      </div>
+      <div class="tl-row">
+        <div class="tl-left">
+          <span class="tl-time">10:28</span>
+          <div class="tl-dot"></div>
+          <div class="tl-line"></div>
+        </div>
+        <div class="tl-card">
+          <span class="tl-tag tag-after">導入後</span>
+          <div class="tl-card-title">BMW完了　→　完了ボタンを押す</div>
+          <div class="tl-card-desc">「終わりました」がスカイBMWチームへ自動送信。電話不要。</div>
+        </div>
+      </div>
+      <div class="tl-row">
+        <div class="tl-left">
+          <span class="tl-time">月末</span>
+          <div class="tl-dot"></div>
+          <div class="tl-line"></div>
+        </div>
+        <div class="tl-card">
+          <span class="tl-tag tag-after">導入後</span>
+          <div class="tl-card-title">集計画面を開いて確認するだけ</div>
+          <div class="tl-card-desc">BMW 18台・JLR 12台・POR 7台・VOL 4台　計41台。チケットを数える作業はない。</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-label">WHAT CHANGES</div>
+  <div class="merit-grid">
+    <div class="merit-card">
+      <div class="merit-num">10<span class="merit-unit">秒</span></div>
+      <div class="merit-label">スカイ側の操作。会社を選んで送るだけ。</div>
+    </div>
+    <div class="merit-card">
+      <div class="merit-num">0<span class="merit-unit">枚</span></div>
+      <div class="merit-label">手書きチケットが不要になる。</div>
+    </div>
+    <div class="merit-card">
+      <div class="merit-num">自動<span class="merit-unit">集計</span></div>
+      <div class="merit-label">月末の台数確認が不要。常時リアルタイムで見える。</div>
+    </div>
+    <div class="merit-card">
+      <div class="merit-num">会社<span class="merit-unit">別</span></div>
+      <div class="merit-label">各社の通知はそれぞれの担当者だけに届く。</div>
+    </div>
+  </div>
+</div>
+
+<!-- 将来拡張 -->
+<div class="future-section">
+  <div class="future-label">NEXT STEP</div>
+  <div class="future-title">ゆくゆくは<br><span>一般のお客様へも。</span></div>
+  <div class="future-body">
+    今回のシステムはスカイグループ向けからスタートしますが、同じ仕組みをそのまま一般客の受付にも広げられる設計にします。
+  </div>
+  <div class="future-cards">
+    <div class="future-card">
+      <div class="future-card-icon">📱</div>
+      <div>
+        <div class="future-card-title">オンライン予約</div>
+        <div class="future-card-desc">QRコードや専用URLから一般客が洗車を予約できる。当日の混雑が事前に読める。</div>
+      </div>
+    </div>
+    <div class="future-card">
+      <div class="future-card-icon">🔔</div>
+      <div>
+        <div class="future-card-title">完了通知</div>
+        <div class="future-card-desc">「終わりました」をLINEで受け取れる。お客様が待たずに動ける。</div>
+      </div>
+    </div>
+    <div class="future-card">
+      <div class="future-card-icon">📈</div>
+      <div>
+        <div class="future-card-title">稼働データの蓄積</div>
+        <div class="future-card-desc">法人・一般を合わせた稼働実績が自動で記録される。繁忙期の傾向も見えてくる。</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="footer">
+  <div class="footer-note">
+    まずはこんな感じで考えてみました。<br>
+    使いやすいかどうか、現場の感覚で聞かせてもらえると助かります。<br><br>
+    <span style="color:var(--ink-faint)">叩き台なので、何でも変えられます。</span>
+  </div>
+</div>
+
+<script>
+function switchMock(tab) {
+  document.querySelectorAll('.m-tab').forEach((el,i) => {
+    el.classList.toggle('active',
+      (i===0&&tab==='gs')||(i===1&&tab==='notify')||(i===2&&tab==='monthly'));
+  });
+  document.querySelectorAll('.mock-page').forEach(el=>el.classList.remove('active'));
+  document.getElementById('mock-'+tab).classList.add('active');
+}
+</script>
+</body>
+</html>
